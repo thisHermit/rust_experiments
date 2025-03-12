@@ -5,7 +5,7 @@ edition = "2024"
 
 [[bin]]
 
-name = "Bashar is cool"
+name = "Bashar_is_cool"
 path = "src/fizzbuzz.rs"
 
 [dependencies]
