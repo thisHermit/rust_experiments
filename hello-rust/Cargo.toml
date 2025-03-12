@@ -3,9 +3,9 @@ name = "hello-rust"
 version = "0.1.0"
 edition = "2024"
 
-[[bin]]
+#[[bin]]
 
-name = "Bashar_is_cool"
-path = "src/fizzbuzz.rs"
+#name = "fizzbuzz"
+#path = "src/fizzbuzz.rs"
 
 [dependencies]
