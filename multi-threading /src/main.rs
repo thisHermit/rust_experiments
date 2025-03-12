@@ -1,13 +1,24 @@
-fn main() {
-    println!("Hello, world!");
-    for value in 1..11{
-        print!("{}: ", value);
-        if value % 2 == 0 {
-            print!("Fizz")
+use std::thread;
+use std::time::Duration;
+
+fn multi_threaded_fizz_buzz(){
+    let handle = thread::spawn(|| {
+        for i in 1..10 {
+            println!("hi number {i} from the spawned thread!");
+            thread::sleep(Duration::from_millis(1));
         }
-        if value % 5 == 0 {
-            print!("Buzz")
-        }
-        println!()
+    });
+
+    handle.join().unwrap();
+
+    for i in 1..5 {
+        println!("hi number {i} from the main thread!");
+        thread::sleep(Duration::from_millis(1));
     }
+}
+
+
+
+fn main() {
+    multi_threaded_fizz_buzz()
 }
