@@ -4,7 +4,7 @@ use std::time::Duration;
 fn multi_threaded_fizz_buzz(){
     let handle = thread::spawn(|| {
         for i in 1..10 {
-            println!("hi number {i} from the spawned thread!");
+            if i % 2 == 0 { println!("fizz");}else { println!("buzz"); }
             thread::sleep(Duration::from_millis(1));
         }
     });
@@ -12,7 +12,7 @@ fn multi_threaded_fizz_buzz(){
     handle.join().unwrap();
 
     for i in 1..5 {
-        println!("hi number {i} from the main thread!");
+        println!("CoC now");
         thread::sleep(Duration::from_millis(1));
     }
 }
