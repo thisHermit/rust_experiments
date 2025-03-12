@@ -5,12 +5,15 @@ fn main() {
     let mut buffer = String::new();
     let mut height = 5;
     stdin.read_line(&mut buffer);
-    height = buffer.trim().parse::<i32>().unwrap();
+    height = buffer.trim().parse::<usize>().unwrap();
 
     for i in 1..height+1 {
+        buffer = "".to_owned();
         for _j in 0..i {
-            print!("*");
+            buffer = buffer + "*";
         }
-        println!("");
+        
+        print!("{star:<height$}", star=buffer);
+        println!("{star:>height$}", star=buffer);
     }
 }
