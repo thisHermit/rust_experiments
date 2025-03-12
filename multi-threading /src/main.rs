@@ -1,5 +1,3 @@
-mod Cane;
-
 fn main() {
     println!("Hello, world!");
     for value in 1..11{
