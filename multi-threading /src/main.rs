@@ -12,7 +12,7 @@ fn multi_threaded_fizz_buzz(){
     handle.join().unwrap();
 
     for i in 1..5 {
-        println!("CoC now");
+        println!("CoC now {i}");
         thread::sleep(Duration::from_millis(1));
     }
 }
@@ -20,5 +20,13 @@ fn multi_threaded_fizz_buzz(){
 
 
 fn main() {
-    multi_threaded_fizz_buzz()
+    multi_threaded_fizz_buzz();
+
+    let chad = vec![ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ];
+
+    let handle = thread::spawn(move || {println!("Cool Ass vector {chad:?}")});
+    handle.join().unwrap();
+
+
+
 }
