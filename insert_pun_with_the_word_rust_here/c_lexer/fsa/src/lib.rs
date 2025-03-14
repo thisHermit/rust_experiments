@@ -1,4 +1,4 @@
-mod da_trie;
+mod ta_trie;
 
 pub struct FSA {}
 
@@ -8,7 +8,7 @@ mod tests {
 
     #[test]
     fn it_works() {
-        let result = add(2, 2);
+        let result = 2 + 2;
         assert_eq!(result, 4);
     }
 }
