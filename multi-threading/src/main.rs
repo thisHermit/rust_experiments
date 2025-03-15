@@ -32,23 +32,24 @@ fn chads1(){
     let chad = handle2.join().unwrap();
     println!("Is it still cool?  {chad:?}");
 }
-fn mntd(length:u8 ) -> Vec<i128> {
+fn mntd(length:u128 ) -> Vec<u32> {
     println!("MTND {length}");
 
-    let mut temp1: Vec<i128> = Vec::new();
-    let mut temp: Vec<i128> = Vec::new();
-    let mut result: Vec<i128> = Vec::new();
+    let mut temp1: Vec<u16> = Vec::new();
+    let mut temp: Vec<u16> = Vec::new();
+    let mut result: Vec<u32> = Vec::new();
 
 
-    for i in 0..length  {
-        temp1.push(random::<i8>() as i128 );
+    for _i in 0..length  {
+        temp1.push((random::<u8>() % 6 ) as u16 + (random::<u8>() % 6 ) as u16 + (random::<u8>() % 6 ) as u16 +(random::<u8>() % 6 ) as u16 );
+
     }
-    for i in 0..length  {
-        temp.push(random::<i8>() as i128 );
+    for _i in 0..length  {
+        temp.push( (random::<u8>() % 6 ) as u16 + (random::<u8>() % 6 ) as u16 + (random::<u8>() % 6 ) as u16 + (random::<u8>() % 6 ) as u16);
     }
 
     for i in 0..length  {
-        result.push(temp1[i as usize]  + temp[i as usize] );
+        result.push(temp1[i as usize] as u32 + temp[i as usize] as u32 ) ;
     }
 
     result
@@ -56,10 +57,10 @@ fn mntd(length:u8 ) -> Vec<i128> {
 
 
 }
-fn write_vec_to_file(vec:Vec<i128>) -> std::io::Result<()>{
+fn write_vec_to_file(vec:Vec<u32>) -> std::io::Result<()>{
     let mut file = File::create("Vector.txt")?;
     for i in vec {
-        let mut temp = i.to_string() + ",";
+        let  temp = i.to_string() + ",";
         file.write(temp.as_bytes())?;
     }
     Ok(())
@@ -69,12 +70,7 @@ fn write_vec_to_file(vec:Vec<i128>) -> std::io::Result<()>{
 
 
 fn main() {
-    multi_threaded_fizz_buzz();
-    chads1();
-    let output = mntd(100);
+    let output = mntd(1000000);
     write_vec_to_file(output).unwrap();
-
-
-
 
 }
