@@ -1,8 +1,7 @@
+use arrayvec::ArrayString;
 use std::fmt;
-use std::io::Read;
-use std::io::{Cursor, Write};
+use std::fmt::Write;
 
-#[derive(Debug)]
 pub struct TATrie {
     base: Vec<i32>,
     next: Vec<i32>,
@@ -63,7 +62,50 @@ impl TATrie {
     }
 }
 
-impl fmt::Display for TATrie {
+impl fmt::Debug for TATrie {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut output = String::with_capacity(1024);
+        let mut txt_buf: ArrayString<127> = ArrayString::new();
+
+        write!(
+            &mut output,
+            "base len: {}, base {:?}\nnext len: {}, next:",
+            self.base.len(),
+            self.base,
+            self.next.len(),
+        )
+        .unwrap();
+
+        for (idx, nxt_node) in self.next.iter().enumerate() {
+            let owner: i32 = self.check[idx];
+            if owner != -1 && *nxt_node != -1 {
+                // !! DEBUG !!
+                // println!("owner {}", owner);
+                // !! DEBUG !!
+
+                let owner_start_idx = self.base[owner as usize];
+
+                write!(
+                    &mut txt_buf,
+                    ", [{} -({})-> {}]",
+                    owner,
+                    (idx as i32) - owner_start_idx,
+                    *nxt_node
+                )
+                .unwrap();
+
+                output.push_str(txt_buf.as_str());
+                txt_buf.clear();
+            }
+        }
+
+        f.write_str(&output)
+    }
+    /* this function writes the desired format using std lib only shit.
+    i think it'd be interesting to see if its better than the ArrayString
+    from arrayvec in any way, other than it just being included already */
+
+    /*
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut output = String::new();
 
@@ -98,7 +140,7 @@ impl fmt::Display for TATrie {
         output.push_str("");
 
         write!(f, "{} is {} years old", 6, 9)
-    }
+    }*/
 }
 
 #[cfg(test)]
@@ -119,6 +161,6 @@ mod tests {
         da_trie.add(3, &node3);
 
         assert_eq!(da_trie.base.len(), 4);
-        println!("{:?}", da_trie);
+        println!("{:#?}", da_trie);
     }
 }
