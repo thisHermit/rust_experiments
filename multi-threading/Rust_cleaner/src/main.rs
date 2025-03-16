@@ -21,11 +21,11 @@ fn decompose_date(date: &str) -> Vec<u16>{
 }
 fn seconds_since_start(decomposed_date: Vec<u16>) -> u128 {
     let mut seconds_since_start:u128 = 0;
-    seconds_since_start += (decomposed_date[0] -2001) as u128 * 31536000 as u128;
-    seconds_since_start += decomposed_date[1] as u128 * 2592000 as u128;
-    seconds_since_start += decomposed_date[2] as u128 * 86400 as u128;
-    seconds_since_start += decomposed_date[3] as u128 * 3600 as u128;
-    seconds_since_start += decomposed_date[4] as u128 * 60 as u128;
+    seconds_since_start += (decomposed_date[0] -2001) as u128 * 31536000u128;
+    seconds_since_start += decomposed_date[1] as u128 * 2592000u128;
+    seconds_since_start += decomposed_date[2] as u128 * 86400u128;
+    seconds_since_start += decomposed_date[3] as u128 * 3600u128;
+    seconds_since_start += decomposed_date[4] as u128 * 60u128;
     seconds_since_start += decomposed_date[5] as u128 ;
 
     return seconds_since_start as u128
@@ -63,6 +63,32 @@ fn main() -> Result<(), Box<dyn Error>> {
     .from_path(input_file)?;
 
     let headers = reader.headers()?.clone();
+
+    let mut writer = WriterBuilder::new().has_headers(true).from_path(output_file)?;
+    writer.write_record(&headers);
+
+    let mut i = 0;
+    let mut date = "ss".to_string();
+    for record in reader.records() {
+        if i > 10000 {break}
+        if record.is_err() { continue; }
+
+        let record = record.unwrap();
+
+        if date  != record.iter().collect::<Vec<_>>()[2].to_string() {
+            println!("{:?} vs {}", record.iter().collect::<Vec<_>>()[2], date);
+        }
+
+
+
+        writer.write_record(&record).unwrap();
+        let record_date = record.iter().collect::<Vec<_>>()[2].to_string(); // Convert to owned String
+
+        date = record_date;
+
+        i+=1;
+    }
+    
     datetime_difference("2025-03-07 23:39:44", "2025-03-16 09:26:49", "d");
 
 
