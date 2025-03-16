@@ -1,3 +1,3 @@
-pub mod buffer_buffoonery;
-
-fn main() {}
+fn main() {
+    println!("hello from plain old main!");
+}

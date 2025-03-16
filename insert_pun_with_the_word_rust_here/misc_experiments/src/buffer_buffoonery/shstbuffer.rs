@@ -6,7 +6,7 @@ use std::ops::Index;
  * a simple implementation allows me to get a better look at what happens
  */
 pub struct SHSTBuffer<T, const CAP: usize> {
-    data: [MaybeUninit<T>; CAP],
+    pub data: [MaybeUninit<T>; CAP],
 }
 
 impl<T, const CAP: usize> SHSTBuffer<T, CAP> {
