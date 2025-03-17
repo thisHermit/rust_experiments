@@ -1,34 +1,36 @@
 CC=gcc
 DIR=./bin
+FILENAME=misc_experiments
 
-all: $(DIR) buffer_buffoonery.o0 buffer_buffoonery.o1 buffer_buffoonery.o2 buffer_buffoonery.o3 buffer_buffoonery.s0 buffer_buffoonery.s1 buffer_buffoonery.s2 buffer_buffoonery.s3
+
+all: $(DIR) $(FILENAME).o0 $(FILENAME).o1 $(FILENAME).o2 $(FILENAME).o3 $(FILENAME).s0 $(FILENAME).s1 $(FILENAME).s2 $(FILENAME).s3
 
 $(DIR):
 	mkdir -p $(DIR)
 
-buffer_buffoonery.o0: buffer_buffoonery.c
-	$(CC) -O0 -o $(DIR)/buffer_buffoonery.o0 buffer_buffoonery.c
+$(FILENAME).o0: $(FILENAME).c
+	$(CC) -O0 -o $(DIR)/$(FILENAME).o0 $(FILENAME).c
 
-buffer_buffoonery.o1: buffer_buffoonery.c
-	$(CC) -O1 -o $(DIR)/buffer_buffoonery.o1 buffer_buffoonery.c
+$(FILENAME).o1: $(FILENAME).c
+	$(CC) -O1 -o $(DIR)/$(FILENAME).o1 $(FILENAME).c
 
-buffer_buffoonery.o2: buffer_buffoonery.c
-	$(CC) -O2 -o $(DIR)/buffer_buffoonery.o2 buffer_buffoonery.c
+$(FILENAME).o2: $(FILENAME).c
+	$(CC) -O2 -o $(DIR)/$(FILENAME).o2 $(FILENAME).c
 
-buffer_buffoonery.o3: buffer_buffoonery.c
-	$(CC) -O3 -o $(DIR)/buffer_buffoonery.o3 buffer_buffoonery.c
+$(FILENAME).o3: $(FILENAME).c
+	$(CC) -O3 -o $(DIR)/$(FILENAME).o3 $(FILENAME).c
 
-buffer_buffoonery.s0: buffer_buffoonery.c
-	$(CC) -O0 -S -o $(DIR)/buffer_buffoonery.s0 buffer_buffoonery.c
+$(FILENAME).s0: $(FILENAME).c
+	$(CC) -O0 -S -o $(DIR)/$(FILENAME).s0 $(FILENAME).c
 
-buffer_buffoonery.s1: buffer_buffoonery.c
-	$(CC) -O1 -S -o $(DIR)/buffer_buffoonery.s1 buffer_buffoonery.c
+$(FILENAME).s1: $(FILENAME).c
+	$(CC) -O1 -S -o $(DIR)/$(FILENAME).s1 $(FILENAME).c
 
-buffer_buffoonery.s2: buffer_buffoonery.c
-	$(CC) -O2 -S -o $(DIR)/buffer_buffoonery.s2 buffer_buffoonery.c
+$(FILENAME).s2: $(FILENAME).c
+	$(CC) -O2 -S -o $(DIR)/$(FILENAME).s2 $(FILENAME).c
 
-buffer_buffoonery.s3: buffer_buffoonery.c
-	$(CC) -O3 -S -o $(DIR)/buffer_buffoonery.s3 buffer_buffoonery.c
+$(FILENAME).s3: $(FILENAME).c
+	$(CC) -O3 -S -o $(DIR)/$(FILENAME).s3 $(FILENAME).c
 
 clean:
 	rm -rf $(DIR)/*
