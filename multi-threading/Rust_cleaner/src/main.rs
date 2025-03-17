@@ -68,15 +68,17 @@ fn main() -> Result<(), Box<dyn Error>> {
     writer.write_record(&headers);
 
     let mut i = 0;
-    let mut date = "ss".to_string();
+    let mut Previous_date = "2025-03-07 23:39:44".to_string();
     for record in reader.records() {
         if i > 10000 {break}
         if record.is_err() { continue; }
 
         let record = record.unwrap();
 
-        if date  != record.iter().collect::<Vec<_>>()[2].to_string() {
-            println!("{:?} vs {}", record.iter().collect::<Vec<_>>()[2], date);
+        if Previous_date != record.iter().collect::<Vec<_>>()[2].to_string() {
+            println!("{:?} vs {}", record.iter().collect::<Vec<_>>()[2], Previous_date);
+            println!("second difference {}", datetime_difference(&Previous_date, record.iter().collect::<Vec<_>>()[2], &record[0]));
+
         }
 
 
@@ -84,7 +86,13 @@ fn main() -> Result<(), Box<dyn Error>> {
         writer.write_record(&record).unwrap();
         let record_date = record.iter().collect::<Vec<_>>()[2].to_string(); // Convert to owned String
 
-        date = record_date;
+
+        // TODO: Implement RollUP database function : y=\operatorname{floor}\left(\sqrt{x}+10^{-3}x^{2}\right)
+
+
+        Previous_date = record_date;
+
+
 
         i+=1;
     }
