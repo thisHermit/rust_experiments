@@ -2,6 +2,7 @@ mod datetime;
 
 use std::error::Error;
 use csv::{ReaderBuilder, WriterBuilder};
+use crate::datetime::datetime_difference;
 // Smart
 // Chungus
 
@@ -43,19 +44,30 @@ fn main() -> Result<(), Box<dyn Error>> {
         .has_headers(true)
         .from_path(input_file)?;
 
-
+    let  write = true;
+    let mut number_blocks = 0;
 
     for record in reader.records() {
-        //if i > 10000 {break}
+        if i > 10000 {break}
         if record.is_err() { continue; }
 
         let record = record.unwrap();
+        let record_date = record.iter().collect::<Vec<_>>()[2].to_string(); // Convert to owned String
 
-        if previous_date != record.iter().collect::<Vec<_>>()[2].to_string() {
-            println!("{:?} vs {}", record.iter().collect::<Vec<_>>()[2], previous_date);
-            println!("second difference {}", datetime::datetime_difference(&previous_date, record.iter().collect::<Vec<_>>()[2], &record[0]));
-            println!("Seconds difference since start {}", datetime::datetime_difference(record.iter().collect::<Vec<_>>()[2],&last_date, &record[1] ));
-            println!("Rollup function: {}", rollup_function(datetime::datetime_difference(record.iter().collect::<Vec<_>>()[2],&last_date, &record[1] )));
+        if record_date !=  previous_date {
+            println!("{:?} vs {}", record_date, previous_date);
+            println!("second difference {}", datetime_difference(&previous_date, &*record_date));
+            println!("Seconds difference since start {}", datetime_difference(&*record_date, &last_date ));
+            println!("Rollup function: {}", rollup_function(datetime_difference(&*record_date, &last_date)));
+
+            number_blocks +=1;
+            println!("Number blocks: {}", number_blocks);
+
+
+
+            let time_difference_from_start = datetime_difference(&record_date, &last_date);
+            let rollup_value = rollup_function(time_difference_from_start);
+
         }
 
 
@@ -63,20 +75,18 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 
 
+
+
         writer.write_record(&record).unwrap();
-        let record_date = record.iter().collect::<Vec<_>>()[2].to_string(); // Convert to owned String
-
-
-
 
         previous_date = record_date;
 
 
 
+
+
         i+=1;
     }
-    
-    datetime::datetime_difference("2025-03-07 23:39:44", "2025-03-16 09:26:49", "d");
 
 
 

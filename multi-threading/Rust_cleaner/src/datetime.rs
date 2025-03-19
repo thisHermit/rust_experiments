@@ -26,7 +26,7 @@ fn seconds_since_start(decomposed_date: Vec<u16>) -> u128 {
     return seconds_since_start as u128
 }
 
-pub(crate) fn datetime_difference(start_date: &str, end_date: &str, measurement: &str  ) -> u128 {
+pub(crate) fn datetime_difference(start_date: &str, end_date: &str) -> u128 {
 
     // dacompose the strings
     let decomposed_start_date = decompose_date(start_date);
@@ -38,10 +38,6 @@ pub(crate) fn datetime_difference(start_date: &str, end_date: &str, measurement:
     if seconds_start > seconds_end { panic!("Start Date bigger then End Date") };
 
     let seconds_diff = seconds_end -  seconds_start;
-
-
-    println!("{}", seconds_diff);
-
 
 
     return seconds_diff
