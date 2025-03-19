@@ -1,58 +1,19 @@
+mod datetime;
+
 use std::error::Error;
-use std::os::unix::raw::uid_t;
 use csv::{ReaderBuilder, WriterBuilder};
+// Smart
+// Chungus
 
-// Smart Chungus
-fn decompose_date(date: &str) -> Vec<u16>{
+fn rollup_function(seconds:u128) -> i32{
+    let day = seconds as f32 / 86400 as f32;
 
-
-    let decomposed_date = date.split(" ").collect::<Vec<&str>>();
-
-    let mut decomposed_date_int: Vec<_> = decomposed_date[0].split("-").map(|x| x.parse::<u16>().unwrap()).collect();
-    let mut y_m_d: Vec<_> = decomposed_date[1].split(":").map(|x| x.parse::<u16>().unwrap()).collect();
-
-    decomposed_date_int.append(&mut y_m_d);
-
-
-    return decomposed_date_int
-
-
+    let y = (day.sqrt() + 0.001 * day.powi(2)).floor() as i32;
+    if y == 0 { return 1;}
+     y
 
 }
-fn seconds_since_start(decomposed_date: Vec<u16>) -> u128 {
-    let mut seconds_since_start:u128 = 0;
-    seconds_since_start += (decomposed_date[0] -2001) as u128 * 31536000u128;
-    seconds_since_start += decomposed_date[1] as u128 * 2592000u128;
-    seconds_since_start += decomposed_date[2] as u128 * 86400u128;
-    seconds_since_start += decomposed_date[3] as u128 * 3600u128;
-    seconds_since_start += decomposed_date[4] as u128 * 60u128;
-    seconds_since_start += decomposed_date[5] as u128 ;
 
-    return seconds_since_start as u128
-}
-
-fn datetime_difference(start_date: &str, end_date: &str, measurement: &str  ) -> u128 {
-
-    // dacompose the strings
-    let decomposed_start_date = decompose_date(start_date);
-    let decomposed_end_date = decompose_date(end_date);
-
-    let seconds_start = seconds_since_start(decomposed_start_date);
-    let seconds_end = seconds_since_start(decomposed_end_date);
-
-    if seconds_start > seconds_end { panic!("Start Date bigger then End Date") };
-
-    let seconds_diff = seconds_end -  seconds_start;
-
-
-    println!("{}", seconds_diff);
-
-
-
-    return seconds_diff
-
-
-}
 
 fn main() -> Result<(), Box<dyn Error>> {
     let  input_file = "Export.csv";
@@ -65,21 +26,40 @@ fn main() -> Result<(), Box<dyn Error>> {
     let headers = reader.headers()?.clone();
 
     let mut writer = WriterBuilder::new().has_headers(true).from_path(output_file)?;
-    writer.write_record(&headers);
+    writer.write_record(&headers).expect("Headers no written");
+
+
 
     let mut i = 0;
-    let mut Previous_date = "2025-03-07 23:39:44".to_string();
+    let mut previous_date = "2025-03-07 23:39:44".to_string();
+
+
+    let binding = reader.records().last().unwrap().unwrap();
+    let last_date = binding.iter().collect::<Vec<_>>()[2];
+
+
+
+    let mut reader = ReaderBuilder::new()
+        .has_headers(true)
+        .from_path(input_file)?;
+
+
+
     for record in reader.records() {
-        if i > 10000 {break}
+        //if i > 10000 {break}
         if record.is_err() { continue; }
 
         let record = record.unwrap();
 
-        if Previous_date != record.iter().collect::<Vec<_>>()[2].to_string() {
-            println!("{:?} vs {}", record.iter().collect::<Vec<_>>()[2], Previous_date);
-            println!("second difference {}", datetime_difference(&Previous_date, record.iter().collect::<Vec<_>>()[2], &record[0]));
-
+        if previous_date != record.iter().collect::<Vec<_>>()[2].to_string() {
+            println!("{:?} vs {}", record.iter().collect::<Vec<_>>()[2], previous_date);
+            println!("second difference {}", datetime::datetime_difference(&previous_date, record.iter().collect::<Vec<_>>()[2], &record[0]));
+            println!("Seconds difference since start {}", datetime::datetime_difference(record.iter().collect::<Vec<_>>()[2],&last_date, &record[1] ));
+            println!("Rollup function: {}", rollup_function(datetime::datetime_difference(record.iter().collect::<Vec<_>>()[2],&last_date, &record[1] )));
         }
+
+
+
 
 
 
@@ -87,17 +67,16 @@ fn main() -> Result<(), Box<dyn Error>> {
         let record_date = record.iter().collect::<Vec<_>>()[2].to_string(); // Convert to owned String
 
 
-        // TODO: Implement RollUP database function : y=\operatorname{floor}\left(\sqrt{x}+10^{-3}x^{2}\right)
 
 
-        Previous_date = record_date;
+        previous_date = record_date;
 
 
 
         i+=1;
     }
     
-    datetime_difference("2025-03-07 23:39:44", "2025-03-16 09:26:49", "d");
+    datetime::datetime_difference("2025-03-07 23:39:44", "2025-03-16 09:26:49", "d");
 
 
 
