@@ -50,9 +50,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut write = true;
     let mut number_blocks = 0;
     let mut last_write_time = 0;
+    let mut deleted_count = 0 ;
 
     for record in reader.records() {
-        // if i > 10000000 {  break; }
         if record.is_err() {
             continue; // Skip records with errors
         }
@@ -76,17 +76,19 @@ fn main() -> Result<(), Box<dyn Error>> {
                 write = true;
                 last_write_time = 0;
             }
+            else { deleted_count +=1 }
 
             // Print the key values whenever the time changes
             println!(
-                "Block: {}  | Time Diff: {}s | Rollup Value: {} | Time Density: {} | Write: {} | Acc Time Density: {} | Record Date {}",
+                "Block: {}  | Time Diff: {}s | Rollup Value: {} | Time Density: {} | Write: {} | Acc Time Density: {} | Record Date {} | Deleted: {}",
                 number_blocks,
                 datetime_difference(&previous_date, &*record_date),
                 rollup_value,
                 time_density,
                 write,
                 last_write_time,
-                record_date
+                record_date,
+                deleted_count
             );
         }
 
@@ -96,7 +98,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
 
         previous_date = record_date; // Update previous_date for next comparison
-        i += 1;
     }
 
     println!("Headers: {:?}", headers); // Final debug statement
