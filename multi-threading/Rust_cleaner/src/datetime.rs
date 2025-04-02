@@ -35,7 +35,7 @@ pub(crate) fn datetime_difference(start_date: &str, end_date: &str) -> u128 {
     let seconds_start = seconds_since_start(decomposed_start_date);
     let seconds_end = seconds_since_start(decomposed_end_date);
 
-    if seconds_start > seconds_end { panic!("Start Date bigger then End Date") };
+    if seconds_start > seconds_end { return  seconds_start - seconds_end; };
 
     let seconds_diff = seconds_end -  seconds_start;
 
