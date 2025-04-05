@@ -1,6 +1,10 @@
 mod datetime;
 
 use std::error::Error;
+use std::fs::File;
+use std::io::Write;
+use std::thread::sleep;
+use std::time::Duration;
 use csv::{ReaderBuilder, WriterBuilder};
 use crate::datetime::datetime_difference;
 
@@ -18,11 +22,32 @@ fn rollup_function(seconds: u128) -> i32 {
     }
     y
 }
+fn create_locking(lock: &str) -> std::io::Result<()> {
+    let file = File::create(lock).unwrap();
+    Ok(())
+}
 
-fn main() -> Result<(), Box<dyn Error>> {
-    let input_file = "Export.csv";
-    let output_file = "filter_export.csv";
+fn locking_function_start() -> bool {
+    // If the locking file doesn't exist it returns False
+    // if it does it return true
 
+    let filename = "file.lock";
+
+    if !std::path::Path::new(filename).exists() {
+        let _ = create_locking(filename).is_ok();
+        return false;
+    }
+    true
+
+}
+fn locking_function_end() -> std::io::Result<()> {
+    std::fs::remove_file("file.lock")?;
+    Ok(())
+
+
+}
+
+fn csv_rollup_parser(input_file: &str, output_file: &str) -> Result<(), Box<dyn Error>>  {
     // Open CSV reader and writer
     let mut reader = ReaderBuilder::new()
         .has_headers(true)
@@ -102,4 +127,24 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     println!("Headers: {:?}", headers); // Final debug statement
     Ok(())
+}
+
+
+fn main() {
+    let input_file = "Export.csv";
+    let output_file = "filter_export.csv";
+    let mut done = false;
+    let mut iterations = 0;
+
+    while done!= true{
+        if iterations != 0{ sleep(Duration::new(5, 0));
+        }
+        if locking_function_start() != true {
+            csv_rollup_parser(input_file, output_file).expect("Failed");
+            println!("triggered");
+            done = true;
+        }
+        iterations += 1;
+    }
+    locking_function_end().expect("Cannot Remove Locking");
 }
