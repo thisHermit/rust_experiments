@@ -1,12 +1,12 @@
 mod datetime;
 
+use crate::datetime::datetime_difference;
+use csv::{ReaderBuilder, WriterBuilder};
 use std::error::Error;
 use std::fs::File;
 use std::io::Write;
 use std::thread::sleep;
 use std::time::Duration;
-use csv::{ReaderBuilder, WriterBuilder};
-use crate::datetime::datetime_difference;
 
 // Smart
 // Chungus
@@ -38,16 +38,13 @@ fn locking_function_start() -> bool {
         return false;
     }
     true
-
 }
 fn locking_function_end() -> std::io::Result<()> {
     std::fs::remove_file("file.lock")?;
     Ok(())
-
-
 }
 
-fn csv_rollup_parser(input_file: &str, output_file: &str) -> Result<(), Box<dyn Error>>  {
+fn csv_rollup_parser(input_file: &str, output_file: &str) -> Result<(), Box<dyn Error>> {
     // Open CSV reader and writer
     let mut reader = ReaderBuilder::new()
         .has_headers(true)
@@ -75,7 +72,7 @@ fn csv_rollup_parser(input_file: &str, output_file: &str) -> Result<(), Box<dyn 
     let mut write = true;
     let mut number_blocks = 0;
     let mut last_write_time = 0;
-    let mut deleted_count = 0 ;
+    let mut deleted_count = 0;
 
     for record in reader.records() {
         if record.is_err() {
@@ -100,8 +97,9 @@ fn csv_rollup_parser(input_file: &str, output_file: &str) -> Result<(), Box<dyn 
             if last_write_time > time_density {
                 write = true;
                 last_write_time = 0;
+            } else {
+                deleted_count += 1
             }
-            else { deleted_count +=1 }
 
             // Print the key values whenever the time changes
             println!(
@@ -129,15 +127,15 @@ fn csv_rollup_parser(input_file: &str, output_file: &str) -> Result<(), Box<dyn 
     Ok(())
 }
 
-
 fn main() {
     let input_file = "Export.csv";
-    let output_file = "filter_export.csv";
+    let output_file = "Export.csv";
     let mut done = false;
     let mut iterations = 0;
 
-    while done!= true{
-        if iterations != 0{ sleep(Duration::new(5, 0));
+    while done != true {
+        if iterations != 0 {
+            sleep(Duration::new(5, 0));
         }
         if locking_function_start() != true {
             csv_rollup_parser(input_file, output_file).expect("Failed");
