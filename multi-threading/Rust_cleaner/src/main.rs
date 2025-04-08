@@ -129,7 +129,7 @@ fn csv_rollup_parser(input_file: &str, output_file: &str) -> Result<(), Box<dyn 
 
 fn main() {
     let input_file = "Export.csv";
-    let output_file = "Export.csv";
+    let output_file = "temp_Export.csv";
     let mut done = false;
     let mut iterations = 0;
 
@@ -144,5 +144,7 @@ fn main() {
         }
         iterations += 1;
     }
+    std::fs::rename("temp_Export.csv", input_file).expect("Cannot rename");
+
     locking_function_end().expect("Cannot Remove Locking");
 }
