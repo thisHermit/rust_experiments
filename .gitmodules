@@ -1,3 +1,6 @@
 [submodule "Rust_cleaner"]
 	path = multi-threading/Rust_cleaner
 	url = https://github.com/mak8427/Rust_cleaner
+[submodule "Rust_interface"]
+	path = Rust_interface
+	url = https://github.com/mak8427/Rust_interface.git
