@@ -147,15 +147,16 @@ impl TaskScheduler {
         F: FnOnce() + Send + 'static,
     {
         // Check if scheduler is shutting down
-        if *self.state.shutdown.lock().unwrap() {
+        if *self.state.shutdown.lock().map_err(|_| "Shutdown lock poisoned")? {
             return Err("Scheduler is shutting down");
         }
 
-        // Generate task ID
-        let mut counter = self.state.task_counter.lock().unwrap();
-        *counter += 1;
-        let task_id = *counter;
-        drop(counter);
+        // Generate task ID with overflow protection
+        let task_id = {
+            let mut counter = self.state.task_counter.lock().map_err(|_| "Task counter lock poisoned")?;
+            *counter = counter.wrapping_add(1);
+            *counter
+        };
 
         let scheduled_task = ScheduledTask {
             task: Box::new(task),
@@ -165,79 +166,153 @@ impl TaskScheduler {
             },
         };
 
-        // Find the worker queue with the least tasks (load balancing)
-        let mut min_queue_size = usize::MAX;
-        let mut best_worker = 0;
+        // Find the worker queue with the least tasks (load balancing with retry)
+        let mut attempts = 0;
+        const MAX_ATTEMPTS: usize = 3;
+        
+        while attempts < MAX_ATTEMPTS {
+            let mut min_queue_size = usize::MAX;
+            let mut best_worker = 0;
+            let mut best_queue_guard = None;
 
-        for (i, queue_mutex) in self.state.worker_queues.iter().enumerate() {
-            if let Ok(queue) = queue_mutex.try_lock() {
-                let size = queue.len();
-                if size < min_queue_size {
-                    min_queue_size = size;
-                    best_worker = i;
+            // Try to find and lock the best queue atomically
+            for (i, queue_mutex) in self.state.worker_queues.iter().enumerate() {
+                if let Ok(queue) = queue_mutex.try_lock() {
+                    let size = queue.len();
+                    if size < min_queue_size {
+                        min_queue_size = size;
+                        best_worker = i;
+                        best_queue_guard = Some(queue);
+                        // If we found an empty queue, use it immediately
+                        if size == 0 {
+                            break;
+                        }
+                    }
                 }
             }
+
+            // If we got a lock on the best queue, use it
+            if let Some(mut queue) = best_queue_guard {
+                queue.push(scheduled_task);
+                // Notify the worker
+                self.state.worker_condvars[best_worker].notify_one();
+                return Ok(task_id);
+            }
+
+            // If we couldn't get any locks, fall back to blocking on the first worker
+            if attempts == MAX_ATTEMPTS - 1 {
+                let mut queue = self.state.worker_queues[0].lock().map_err(|_| "Worker queue lock poisoned")?;
+                queue.push(scheduled_task);
+                self.state.worker_condvars[0].notify_one();
+                return Ok(task_id);
+            }
+
+            attempts += 1;
+            // Brief yield before retrying
+            std::thread::yield_now();
         }
 
-        // Submit to the best worker queue
-        let mut queue = self.state.worker_queues[best_worker].lock().unwrap();
-        queue.push(scheduled_task);
-        
-        // Notify the worker
-        self.state.worker_condvars[best_worker].notify_one();
-
-        Ok(task_id)
+        Err("Failed to submit task after multiple attempts")
     }
 
     /// Submit a poison pill to trigger shutdown
     pub fn submit_poison_pill(&self) {
-        // Submit poison pills to all worker queues
-        for (i, queue_mutex) in self.state.worker_queues.iter().enumerate() {
-            let mut queue = queue_mutex.lock().unwrap();
-            let poison_task = ScheduledTask {
-                task: Box::new(|| {
-                    // This is the poison pill task - it will trigger shutdown
-                }),
-                metadata: TaskMetadata {
-                    id: u64::MAX, // Special ID for poison pill
-                    submitted_at: Instant::now(),
-                },
-            };
-            queue.push(poison_task);
-            
-            // Notify the worker
-            self.state.worker_condvars[i].notify_one();
-        }
+        self.submit_poison_pill_safe();
     }
 
     /// Shutdown the scheduler and wait for all threads to complete
     pub fn shutdown(self) {
-        // Signal shutdown
+        // Signal shutdown first
         {
-            let mut shutdown = self.state.shutdown.lock().unwrap();
-            *shutdown = true;
-            self.state.shutdown_condvar.notify_all();
+            let shutdown_result = self.state.shutdown.lock();
+            match shutdown_result {
+                Ok(mut shutdown) => {
+                    *shutdown = true;
+                    self.state.shutdown_condvar.notify_all();
+                }
+                Err(_) => {
+                    eprintln!("Warning: Shutdown lock poisoned during shutdown");
+                    return;
+                }
+            }
         }
 
         // Submit poison pills to ensure all workers wake up
-        self.submit_poison_pill();
+        // Use a separate method that handles errors gracefully
+        self.submit_poison_pill_safe();
 
-        // Wait for all worker threads
-        for handle in self.worker_handles {
-            let _ = handle.join();
+        // Wait for all worker threads with panic detection
+        let mut worker_panics = 0;
+        for (i, handle) in self.worker_handles.into_iter().enumerate() {
+            match handle.join() {
+                Ok(_) => {
+                    // Worker completed successfully
+                }
+                Err(_) => {
+                    eprintln!("Warning: Worker thread {} panicked during shutdown", i);
+                    worker_panics += 1;
+                }
+            }
         }
 
-        // Wait for supervisor thread
+        // Wait for supervisor thread with panic detection
         if let Some(handle) = self.supervisor_handle {
-            let _ = handle.join();
+            match handle.join() {
+                Ok(_) => {
+                    // Supervisor completed successfully
+                }
+                Err(_) => {
+                    eprintln!("Warning: Supervisor thread panicked during shutdown");
+                }
+            }
+        }
+
+        if worker_panics > 0 {
+            eprintln!("Warning: {} worker threads panicked during shutdown", worker_panics);
+        }
+    }
+
+    /// Submit poison pills with error handling
+    fn submit_poison_pill_safe(&self) {
+        for (i, queue_mutex) in self.state.worker_queues.iter().enumerate() {
+            match queue_mutex.lock() {
+                Ok(mut queue) => {
+                    let poison_task = ScheduledTask {
+                        task: Box::new(|| {
+                            // This is the poison pill task - it will trigger shutdown
+                        }),
+                        metadata: TaskMetadata {
+                            id: u64::MAX, // Special ID for poison pill
+                            submitted_at: Instant::now(),
+                        },
+                    };
+                    queue.push(poison_task);
+                    
+                    // Notify the worker
+                    self.state.worker_condvars[i].notify_one();
+                }
+                Err(_) => {
+                    eprintln!("Warning: Could not submit poison pill to worker {}, queue lock poisoned", i);
+                    // Try to notify anyway in case the worker is waiting
+                    self.state.worker_condvars[i].notify_one();
+                }
+            }
         }
     }
 
     /// Worker thread main loop
     fn worker_loop(worker_id: usize, state: Arc<SchedulerState>, config: SchedulerConfig) {
         loop {
-            // Check for shutdown
-            if *state.shutdown.lock().unwrap() {
+            // Check for shutdown with error handling
+            let should_shutdown = match state.shutdown.lock() {
+                Ok(shutdown) => *shutdown,
+                Err(_) => {
+                    eprintln!("Worker {}: Shutdown lock poisoned, exiting", worker_id);
+                    return;
+                }
+            };
+            
+            if should_shutdown {
                 break;
             }
 
@@ -245,7 +320,14 @@ impl TaskScheduler {
             let task = {
                 let queue_mutex = &state.worker_queues[worker_id];
                 let condvar = &state.worker_condvars[worker_id];
-                let mut queue_guard = queue_mutex.lock().unwrap();
+                
+                let mut queue_guard = match queue_mutex.lock() {
+                    Ok(guard) => guard,
+                    Err(_) => {
+                        eprintln!("Worker {}: Queue lock poisoned, exiting", worker_id);
+                        return;
+                    }
+                };
                 
                 // Wait for tasks if queue is empty
                 loop {
@@ -253,11 +335,26 @@ impl TaskScheduler {
                         break queue_guard.pop();
                     }
                     
-                    if *state.shutdown.lock().unwrap() {
-                        return; // Exit the worker
+                    // Check shutdown again before waiting
+                    let should_shutdown = match state.shutdown.lock() {
+                        Ok(shutdown) => *shutdown,
+                        Err(_) => {
+                            eprintln!("Worker {}: Shutdown lock poisoned while waiting, exiting", worker_id);
+                            return;
+                        }
+                    };
+                    
+                    if should_shutdown {
+                        return;
                     }
                     
-                    queue_guard = condvar.wait(queue_guard).unwrap();
+                    queue_guard = match condvar.wait(queue_guard) {
+                        Ok(guard) => guard,
+                        Err(_) => {
+                            eprintln!("Worker {}: Condition variable wait failed, exiting", worker_id);
+                            return;
+                        }
+                    };
                 }
             };
 
@@ -267,8 +364,12 @@ impl TaskScheduler {
                     break;
                 }
 
-                // Execute the task
-                (scheduled_task.task)();
+                // Execute the task with panic protection
+                std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    (scheduled_task.task)();
+                })).unwrap_or_else(|_| {
+                    eprintln!("Worker {}: Task {} panicked during execution", worker_id, scheduled_task.metadata.id);
+                });
                 continue;
             }
 
@@ -281,8 +382,12 @@ impl TaskScheduler {
                         break;
                     }
 
-                    // Execute the stolen task
-                    (scheduled_task.task)();
+                    // Execute the stolen task with panic protection
+                    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                        (scheduled_task.task)();
+                    })).unwrap_or_else(|_| {
+                        eprintln!("Worker {}: Stolen task {} panicked during execution", worker_id, scheduled_task.metadata.id);
+                    });
                     continue;
                 }
             }
@@ -302,6 +407,12 @@ impl TaskScheduler {
             
             if let Ok(mut queue) = state.worker_queues[target_worker].try_lock() {
                 if let Some(task) = queue.steal() {
+                    // Don't steal poison pills - they are meant for specific workers
+                    if task.metadata.id == u64::MAX {
+                        // Put the poison pill back at the end of the queue
+                        queue.push(task);
+                        continue;
+                    }
                     return Some(task);
                 }
             }
@@ -312,18 +423,29 @@ impl TaskScheduler {
 
     /// Supervisor thread main loop for timeout detection
     fn supervisor_loop(state: Arc<SchedulerState>, timeout_duration: Duration) {
+        let check_interval = Duration::from_millis(500); // More responsive checking
+        
         loop {
-            // Check for shutdown
-            if *state.shutdown.lock().unwrap() {
+            // Check for shutdown with error handling
+            let should_shutdown = match state.shutdown.lock() {
+                Ok(shutdown) => *shutdown,
+                Err(_) => {
+                    eprintln!("Supervisor: Shutdown lock poisoned, exiting");
+                    return;
+                }
+            };
+            
+            if should_shutdown {
                 break;
             }
 
-            // Sleep before next check
-            thread::sleep(Duration::from_secs(1));
+            // Sleep with shorter intervals for more responsive shutdown
+            thread::sleep(check_interval);
 
             // Check all queues for stale tasks
             let now = Instant::now();
             for (worker_id, queue_mutex) in state.worker_queues.iter().enumerate() {
+                // Use try_lock to avoid blocking and reduce contention
                 if let Ok(queue) = queue_mutex.try_lock() {
                     for (task_index, scheduled_task) in queue.queue.iter().enumerate() {
                         let age = now.duration_since(scheduled_task.metadata.submitted_at);
@@ -339,6 +461,7 @@ impl TaskScheduler {
                         }
                     }
                 }
+                // If we can't get the lock, skip this queue to avoid blocking
             }
         }
     }
