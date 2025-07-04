@@ -1,6 +1,7 @@
 mod lookAtThisClass;
 mod task_scheduler;
 mod timeout_test;
+mod work_stealing_demo;
 
 use std::thread;
 use std::time::Duration;
@@ -11,6 +12,7 @@ use std::sync::{Arc, atomic::{AtomicUsize, Ordering}};
 
 use task_scheduler::{TaskScheduler, SchedulerConfig};
 use timeout_test::test_timeout_detection;
+use work_stealing_demo::demonstrate_work_stealing;
 
 // Big Chungus Devs inc
 fn multi_threaded_fizz_buzz(){
@@ -92,6 +94,10 @@ fn main() {
     // Test timeout detection specifically
     println!("3. Testing Timeout Detection:");
     test_timeout_detection();
+
+    // Demonstrate work stealing
+    println!("4. Demonstrating Work Stealing:");
+    demonstrate_work_stealing();
 
     println!("=== All experiments completed ===");
 }
