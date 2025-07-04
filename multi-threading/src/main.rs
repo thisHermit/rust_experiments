@@ -1,7 +1,9 @@
 mod lookAtThisClass;
 mod concurrent_cache;
+mod benchmark;
 
 use concurrent_cache::ConcurrentCache;
+use benchmark::run_cache_benchmark;
 use std::thread;
 use std::time::Duration;
 use rand::random;
@@ -173,6 +175,9 @@ fn cache_demonstration() {
 fn main() {
     // Run the cache demonstration
     cache_demonstration();
+    
+    // Run performance benchmarks
+    run_cache_benchmark();
     
     // Keep the original functionality commented out for now
     // let output = mntd(1000000);

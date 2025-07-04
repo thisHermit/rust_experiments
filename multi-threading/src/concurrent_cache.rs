@@ -240,4 +240,59 @@ mod tests {
         let computations = counter.load(Ordering::SeqCst);
         assert!(computations <= 2, "Too many computations: {}", computations);
     }
+
+    #[test]
+    fn test_high_contention() {
+        let cache = Arc::new(ConcurrentCache::new("test_cache_contention.log".to_string(), Duration::from_secs(10)));
+        let computation_count = Arc::new(AtomicUsize::new(0));
+        
+        let mut handles = vec![];
+        
+        // Spawn many threads all requesting the same key
+        for _i in 0..20 {
+            let cache_clone = Arc::clone(&cache);
+            let counter_clone = Arc::clone(&computation_count);
+            
+            let handle = thread::spawn(move || {
+                let value = cache_clone.get(&"shared_key".to_string(), || {
+                    counter_clone.fetch_add(1, Ordering::SeqCst);
+                    thread::sleep(Duration::from_millis(100)); // Simulate expensive computation
+                    Ok("shared_value".to_string())
+                }).unwrap();
+                
+                assert_eq!(value, "shared_value");
+            });
+            
+            handles.push(handle);
+        }
+        
+        // Wait for all threads to complete
+        for handle in handles {
+            handle.join().unwrap();
+        }
+        
+        // Should have computed the value exactly once despite high contention
+        let computations = computation_count.load(Ordering::SeqCst);
+        assert_eq!(computations, 1, "Expected exactly 1 computation, got {}", computations);
+    }
+
+    #[test]
+    fn test_garbage_collection() {
+        let cache = ConcurrentCache::new("test_cache_gc.log".to_string(), Duration::from_millis(100));
+        
+        // Add some entries
+        cache.put("key1".to_string(), "value1".to_string()).unwrap();
+        cache.put("key2".to_string(), "value2".to_string()).unwrap();
+        cache.put("key3".to_string(), "value3".to_string()).unwrap();
+        
+        assert_eq!(cache.size(), 3);
+        
+        // Wait for expiration
+        thread::sleep(Duration::from_millis(150));
+        
+        // Manually trigger cleanup
+        let removed = cache.cleanup_expired().unwrap();
+        assert_eq!(removed, 3, "Should have removed 3 expired entries");
+        assert_eq!(cache.size(), 0, "Cache should be empty after cleanup");
+    }
 }
