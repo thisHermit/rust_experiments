@@ -1,77 +1,16 @@
-mod lookAtThisClass;
+// Concurrent In-Memory Cache with Expiration and Write-Through
+// Clean main file focused on cache functionality
+
 mod concurrent_cache;
 mod benchmark;
+mod original_experiments;
 
 use concurrent_cache::ConcurrentCache;
 use benchmark::run_cache_benchmark;
+use original_experiments::run_original_experiments;
 use std::thread;
 use std::time::Duration;
-use rand::random;
-use std::fs::File;
-use std::io::prelude::*;
 use std::sync::Arc;
-
-// Big Chungus Devs inc
-fn multi_threaded_fizz_buzz(){
-    let handle = thread::spawn(|| {
-        for i in 1..10 {
-            if i % 2 == 0 { println!("fizz");}else { println!("buzz"); }
-            thread::sleep(Duration::from_millis(1));
-        }
-    });
-
-    handle.join().unwrap();
-
-    for i in 1..5 {
-        println!("CoC now {i}");
-        thread::sleep(Duration::from_millis(1));
-    }
-}
-
-fn chads1(){
-    let  chad = vec![ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ];
-
-
-    let handle = thread::spawn(move || {println!("Cool Ass vector {chad:?}"); chad }) ;
-    let mut chad = handle.join().unwrap();
-    let handle2 = thread::spawn(move || {for j in 0..chad.len() { chad[j as usize] = random() } chad });
-    let chad = handle2.join().unwrap();
-    println!("Is it still cool?  {chad:?}");
-}
-fn mntd(length:u128 ) -> Vec<u32> {
-    println!("MTND {length}");
-
-    let mut temp1: Vec<u16> = Vec::new();
-    let mut temp: Vec<u16> = Vec::new();
-    let mut result: Vec<u32> = Vec::new();
-
-
-    for _i in 0..length  {
-        temp1.push((random::<u8>() % 6 ) as u16 + (random::<u8>() % 6 ) as u16 + (random::<u8>() % 6 ) as u16 +(random::<u8>() % 6 ) as u16 );
-
-    }
-    for _i in 0..length  {
-        temp.push( (random::<u8>() % 6 ) as u16 + (random::<u8>() % 6 ) as u16 + (random::<u8>() % 6 ) as u16 + (random::<u8>() % 6 ) as u16);
-    }
-
-    for i in 0..length  {
-        result.push(temp1[i as usize] as u32 + temp[i as usize] as u32 ) ;
-    }
-
-    result
-
-
-
-}
-fn write_vec_to_file(vec:Vec<u32>) -> std::io::Result<()>{
-    let mut file = File::create("Vector.txt")?;
-    for i in vec {
-        let  temp = i.to_string() + ",";
-        file.write(temp.as_bytes())?;
-    }
-    Ok(())
-
-}
 
 
 
@@ -173,13 +112,48 @@ fn cache_demonstration() {
 }
 
 fn main() {
-    // Run the cache demonstration
-    cache_demonstration();
+    println!("🦀 Rust Experiments - Concurrent Cache Implementation 🦀");
+    println!("=====================================================");
     
-    // Run performance benchmarks
-    run_cache_benchmark();
+    // Check command line arguments for what to run
+    let args: Vec<String> = std::env::args().collect();
     
-    // Keep the original functionality commented out for now
-    // let output = mntd(1000000);
-    // write_vec_to_file(output).unwrap();
+    if args.len() > 1 {
+        match args[1].as_str() {
+            "cache" => {
+                cache_demonstration();
+            },
+            "benchmark" => {
+                run_cache_benchmark();
+            },
+            "original" => {
+                run_original_experiments();
+            },
+            "all" => {
+                cache_demonstration();
+                println!("\n{}", "=".repeat(50));
+                run_cache_benchmark();
+                println!("\n{}", "=".repeat(50));
+                run_original_experiments();
+            },
+            _ => {
+                print_usage();
+            }
+        }
+    } else {
+        // Default: run cache demonstration and benchmarks
+        cache_demonstration();
+        println!("\n{}", "=".repeat(50));
+        run_cache_benchmark();
+    }
+}
+
+fn print_usage() {
+    println!("Usage: cargo run [option]");
+    println!("Options:");
+    println!("  cache     - Run cache demonstration only");
+    println!("  benchmark - Run cache benchmarks only");
+    println!("  original  - Run original threading experiments");
+    println!("  all       - Run everything");
+    println!("  (no args) - Run cache demo and benchmarks (default)");
 }
