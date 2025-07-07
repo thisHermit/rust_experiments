@@ -1,1 +1,4 @@
 target/
+test_cache*.log
+cache_backing_store.log
+benchmark_cache.log
